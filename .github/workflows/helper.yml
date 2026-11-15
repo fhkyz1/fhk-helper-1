@@ -2,7 +2,7 @@ name: fhk-helper
 # Runs only in a supporter's fork: makes FHK self-play data with the newest net and publishes it on the fork's sp-data branch.
 on:
   schedule:
-    - cron: "30 */6 * * *"
+    - cron: "20 * * * *"
   workflow_dispatch:
 concurrency:
   group: fhk-helper
