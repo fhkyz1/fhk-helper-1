@@ -575,10 +575,15 @@ async function modeStart(p, pos){
   T.d = d; T.busy = false;
   if (M.rules) mfCands(); else mfFinal();
 }
+const FC_G = ['Achha capture', 'Check', 'Mohra bachao', 'Nayi dhamki', 'Shaant chaal'];
+const FC_TXT = `<details class="small"><summary><b>⚡ Tez tarika:</b> har chaal score mat karo</summary><p>Is kram mein dekho aur __K__ chaalein milte hi ruk jao: <b>1.</b> achhe captures (bada shikaar pehle, 2 tak) <b>2.</b> check <b>3.</b> khatre mein pada apna mohra bachao (bada pehle) <b>4.</b> nayi dhamki (fork, pin, pyada mohre par) <b>5.</b> baaki shaant chaalein (rule points se). Phir ye kram dobara chalao jab tak list poori na ho.</p></details>`;
+function fcHTML(d, K){ const a = (d.fast || []).slice(0, K); if (!a.length) return '';
+  const has = a.some(m => m.good);
+  return `<h3>⚡ Tez candidates (top ${K})</h3><ol class="small cl">${a.map(m => `<li><b>${esc(m.san)}</b> <span class="muted">${esc(FC_G[m.g])}</span>${m.good ? ' ★' : ''}</li>`).join('')}</ol><p class="small ${has ? 'good' : 'bad'}">${has ? '✓ Tez tarike se bhi engine jaisi chaal mil gayi.' : '✗ Is baar tez tarike ki list mein engine jaisi chaal nahi aayi.'}</p>`; }
 function mfCands(){
   const M = T.M; T.step = 3; T.cands = []; T.compared = false;
   panel.innerHTML = `<div class="card"><h2>Step 1: ${M.K} candidates chuno</h2>${cardHTML(M.rules)}
-    <p>Har chaal ke points socho aur sabse zyada points wali <b>${M.K} chaalein board par khelo</b>. Har chaal list mein jud jaayegi (board wapas aa jaayega). Chip dabane se hat jaati hai.</p>
+    <p>Har chaal ke points socho aur sabse zyada points wali <b>${M.K} chaalein board par khelo</b>.</p>${FC_TXT.replace('__K__', M.K)}<p class="small"> Har chaal list mein jud jaayegi (board wapas aa jaayega). Chip dabane se hat jaati hai.</p>
     <div class="row" id="myC"></div>
     <div class="row" style="margin-top:10px"><button class="btn pri" id="cmp" disabled>Engine se milaan karo</button><button class="btn" id="clrC">Saaf karo</button></div><div id="fbC"></div></div>`;
   tStatus.textContent = `${sideHi(T.pos.side)}: ${M.K} candidate chaalein board par dikhao`;
@@ -610,6 +615,7 @@ function mfCompare(){
   if (!ruleHas) h.push(`<p class="small">Is position mein rule card ki top ${M.K} mein bhi engine jaisi chaal nahi aayi. Ye wo kuch % positions hain jahan rules kaafi nahi hote.</p>`);
   const extra = T.cands.filter(s => !top.some(m => m.san === s));
   if (extra.length) { h.push(`<p class="small">Aapki ye chaalein engine ki list mein nahi:</p><ul class="small">`); for (const s of extra) { const m = d.moves.find(x => x.san === s); if (m) h.push(`<li><b>${esc(s)}</b> ${fmtPts(m[key])} pts (number ${m.rank}): ${esc(whyTxt(m[wk]))}</li>`); } h.push(`</ul>`); }
+  h.push(fcHTML(d, M.K));
   h.push(`<details><summary class="small">Saari ${d.n} chaalein, points ke hisaab se</summary><ol class="small cl">${d.moves.map(m => `<li><b>${esc(m.san)}</b> ${fmtPts(m[key])}${m.good ? ' ★' : ''} <span class="muted">${esc(whyTxt(m[wk]))}</span></li>`).join('')}</ol></details>`);
   if (M.human) h.push(`<button class="btn pri" id="goCalc">Aage: top ${M.human} par insaani hisaab lagao</button>`);
   else if (M.depth) h.push(`<button class="btn pri" id="goCalc">Aage: in ${M.K} candidates ko ${DEPTH_NAME[M.depth]} calculate karo</button>`);
@@ -624,7 +630,7 @@ function mfFinal(){
   if (M.human) {
     const list = d.moves.slice(0, M.human).map(m => m.san);
     panel.innerHTML = `<div class="card"><h2>Step 2: Insaani hisaab (top ${M.human})</h2>${HBH}
-      <p class="small">Card ki list ki pehli ${M.human} chaalein:</p><div class="row">${list.map(s => `<span class="chip">${esc(s)}</span>`).join('')}</div>
+      ${FC_TXT.replace('__K__', M.human)}<p class="small">Card ki list ki pehli ${M.human} chaalein:</p><div class="row">${list.map(s => `<span class="chip">${esc(s)}</span>`).join('')}</div>
       <p style="margin-top:8px"><b>Step 3:</b> jis chaal ka hisaab score (sabse bure jawab ke baad) sabse zyada ho, wo <b>board par khelo</b>.</p><div id="fb"></div>
       <div class="row"><button class="btn" id="giveUp">Batao (haar maan li)</button></div></div>`;
     tStatus.textContent = `${sideHi(T.pos.side)}: hisaab lagakar apni chaal board par khelo`;
@@ -634,7 +640,7 @@ function mfFinal(){
   const list = M.rules ? d.moves.slice(0, M.K).map(m => m.san) : null;
   panel.innerHTML = `<div class="card"><h2>${M.rules ? 'Step 2' : 'Step 1'}: Calculate karo (${DEPTH_NAME[M.depth]})</h2>
     <p>${esc(DEPTH_TXT[M.depth])}</p>
-    ${list ? `<p class="small">In ${list.length} candidates ko calculate karo:</p><div class="row">${list.map(s => `<span class="chip">${esc(s)}</span>`).join('')}</div>` : `<p class="small">Is mode mein rules nahi hain: saari ${d.n} legal chaalein isi tarah calculate karo.</p>`}
+    ${list ? `<p class="small">In ${list.length} candidates ko calculate karo:</p><div class="row">${list.map(s => `<span class="chip">${esc(s)}</span>`).join('')}</div>` : `<p class="small">Is mode mein rules nahi hain: saari ${d.n} legal chaalein isi tarah calculate karo. ⚡ Tez tarika: pehle ye 5 dekho (sabse zyada umeed wali):</p><div class="row">${(d.fast || []).slice(0, 5).map(m => `<span class="chip">${esc(m.san)} <span class="muted">${esc(FC_G[m.g])}</span></span>`).join('')}</div>`}
     <p style="margin-top:8px">Jis chaal ke baad material aur position sabse achhe bachte hain, wo <b>board par khelo</b>.</p><div id="fb"></div>
     <div class="row"><button class="btn" id="giveUp">Batao (haar maan li)</button></div></div>`;
   tStatus.textContent = `${sideHi(T.pos.side)}: calculate karke apni chaal board par khelo`;
