@@ -95,7 +95,7 @@ table.mt{width:100%;border-collapse:collapse} table.mt td,table.mt th{text-align
 
 <section id="tab-train">
   <details class="card" id="modeCard"><summary><b>Training mode:</b> <span id="modeName"></span></summary>
-    <p class="small muted">Koi bhi mode chuno. % = research mein kitni baar engine jaisi chaal (best se 0.3 pawn ke andar) mili. Training = 321 positions, Games = 10,910 positions (FHK vs Stockfish ke games, sirf test).</p>
+    <p class="small muted">Koi bhi mode chuno. % = research mein kitni baar engine jaisi chaal (best se 0.3 pawn ke andar) mili. Training = 321 positions, Games = 20,602 positions (FHK vs Stockfish ke games, sirf test). Answers v147 engine (depth 8-10) se check kiye gaye.</p>
     <div id="modeList"></div></details>
   <button class="btn" id="exBtn" style="width:100%;margin-bottom:6px">📖 Is mode ke 5 examples (step by step)</button>
   <button class="btn hidden" id="exCalcBtn" style="width:100%;margin-bottom:6px">🧮 Aage ki chaalein kaise sochein (5 examples)</button>
@@ -181,6 +181,8 @@ const E = window.MEEngine;
 const GLYPH = {1:'♟',2:'♞',3:'♝',4:'♜',5:'♛',6:'♚'};
 const VS = '︎';
 const STORE = 'mindseye.coach.v1';
+const ENGV = 'v147'; // engine version the training positions and research numbers were made with
+const verOf = x => x.v || 'v146';
 const ANALYZE_MS = 2200;
 
 // ---------- storage ----------
@@ -458,7 +460,7 @@ async function onTrainMove(m){
 function finish(found, gaveUp){
   if (T.step === 5) return;
   T.step = 5; setSteps(); if (T.res.match === null) T.res.match = false;
-  const rec = { f: T.p.fen, m: T.res.match ? 1 : 0, t: T.res.threat === null ? -1 : (T.res.threat ? 1 : 0), s: T.res.scan === null ? -1 : (T.res.scan ? 1 : 0), c: T.res.cands === undefined ? -1 : T.res.cands, san: T.p.san, at: Date.now() };
+  const rec = { f: T.p.fen, m: T.res.match ? 1 : 0, t: T.res.threat === null ? -1 : (T.res.threat ? 1 : 0), s: T.res.scan === null ? -1 : (T.res.scan ? 1 : 0), c: T.res.cands === undefined ? -1 : T.res.cands, san: T.p.san, at: Date.now(), v: ENGV };
   st.hist.push(rec); if (st.hist.length > 500) st.hist.shift();
   st.seen[T.p.fen] = (st.seen[T.p.fen] || 0) + 1;
   if (!T.res.match) { st.queue = st.queue.filter(q => q.fen !== T.p.fen); st.queue.push({ fen: T.p.fen, at: st.counter + 4 + Math.floor(Math.random() * 4) }); }
@@ -477,23 +479,23 @@ function finish(found, gaveUp){
 // Training = 321 training positions, Games = 10,910 positions from 80+ FHK vs Stockfish games (test only).
 const MODES = {
   classic: { g: 0, name: 'Purana tareeka (5 steps)', sub: 'Khatra, scan, candidates, phir final chaal' },
-  r4_5: { g: 1, rules: 4, K: 5, name: '4 rules, 5 candidates', tr: 96, gm: 95.3 },
-  r4_7: { g: 1, rules: 4, K: 7, name: '4 rules, 7 candidates', tr: 97.8, gm: 97.2 },
-  r4_9: { g: 1, rules: 4, K: 9, name: '4 rules, 9 candidates', tr: 98.8, gm: 98.2 },
-  r8_5: { g: 1, rules: 8, K: 5, name: '8 rules, 5 candidates', tr: 96.3, gm: 95.7 },
-  r8_7: { g: 1, rules: 8, K: 7, name: '8 rules, 7 candidates', tr: 97.8, gm: 97.5 },
-  r8_8: { g: 1, rules: 8, K: 8, name: '8 rules, 8 candidates', tr: 98.1, gm: 98 },
-  r6_5: { g: 1, rules: 6, K: 5, name: '6 rules (position wale), 5 candidates', tr: 97.2, gm: 95.5 },
-  r6_7: { g: 1, rules: 6, K: 7, name: '6 rules (position wale), 7 candidates', tr: 98.1, gm: 97.3 },
-  r6_9: { g: 1, rules: 6, K: 9, name: '6 rules (position wale), 9 candidates', tr: 99.1, gm: 98.3 },
-  c1: { g: 2, depth: 1, name: 'Sirf apni chaal + captures', tr: [81.9, 91, 92.8], gm: [75.9, 88, 92.4] },
-  c2: { g: 2, depth: 2, name: '1 chaal aage', tr: [91, 97.2, 98.4], gm: [83.9, 93.7, 96.4] },
-  c3: { g: 2, depth: 3, name: '1.5 chaal aage', tr: [96.9, 99.7, 99.7], gm: [91.4, 97.1, 98.5] },
-  c4: { g: 2, depth: 4, name: '2 chaal aage', tr: [99.7, 100, 100], gm: [98.1, 99.5, 99.8] },
-  m4_12: { g: 3, rules: 4, K: 12, depth: 4, name: '4 rules + 12 candidates + 2 chaal', tr: [98.4, 98.8, 98.8], gm: [96.9, 98.4, 98.7], optimal: true },
-  m8_10: { g: 3, rules: 8, K: 10, depth: 4, name: '8 rules + 10 candidates + 2 chaal', tr: [98.4, 98.8, 98.8], gm: [96.6, 98, 98.3] },
-  hb: { g: 4, rules: 4, K: 12, human: 5, name: '⭐ Best routine: 4 rules + 12 candidates + insaani hisaab', tr: [80.7, 91, 94.7], gm: [71, 86.1, 91.2] },
-  m8_8: { g: 3, rules: 8, K: 8, depth: 4, name: '8 rules + 8 candidates + 2 chaal', tr: [97.8, 98.1, 98.1], gm: [95.9, 97.3, 97.6] }
+  r4_5: { g: 1, rules: 4, K: 5, name: '4 rules, 5 candidates', tr: 94.7, gm: 91.1 },
+  r4_7: { g: 1, rules: 4, K: 7, name: '4 rules, 7 candidates', tr: 96.6, gm: 94.2 },
+  r4_9: { g: 1, rules: 4, K: 9, name: '4 rules, 9 candidates', tr: 97.8, gm: 96 },
+  r8_5: { g: 1, rules: 8, K: 5, name: '8 rules, 5 candidates', tr: 94.4, gm: 91.4 },
+  r8_7: { g: 1, rules: 8, K: 7, name: '8 rules, 7 candidates', tr: 96.6, gm: 94.5 },
+  r8_8: { g: 1, rules: 8, K: 8, name: '8 rules, 8 candidates', tr: 96.9, gm: 95.4 },
+  r6_5: { g: 1, rules: 6, K: 5, name: '6 rules (position wale), 5 candidates', tr: 95.3, gm: 91.3 },
+  r6_7: { g: 1, rules: 6, K: 7, name: '6 rules (position wale), 7 candidates', tr: 96.9, gm: 94.4 },
+  r6_9: { g: 1, rules: 6, K: 9, name: '6 rules (position wale), 9 candidates', tr: 98.1, gm: 96.1 },
+  c1: { g: 2, depth: 1, name: 'Sirf apni chaal + captures', tr: [77.6, 86.3, 89.7], gm: [62.3, 78.2, 85] },
+  c2: { g: 2, depth: 2, name: '1 chaal aage', tr: [84.1, 93.5, 96.3], gm: [66.9, 82.2, 88.6] },
+  c3: { g: 2, depth: 3, name: '1.5 chaal aage', tr: [89.4, 96.9, 98.1], gm: [70.8, 85.1, 90.7] },
+  c4: { g: 2, depth: 4, name: '2 chaal aage', tr: [92.2, 97.5, 98.1], gm: [73.4, 87, 92.2] },
+  m4_12: { g: 3, rules: 4, K: 12, depth: 4, name: '4 rules + 12 candidates + 2 chaal', tr: [91, 96, 96.6], gm: [73.1, 86.3, 91.3], optimal: true },
+  m8_10: { g: 3, rules: 8, K: 10, depth: 4, name: '8 rules + 10 candidates + 2 chaal', tr: [91.3, 96, 96.9], gm: [73.1, 86.1, 91] },
+  hb: { g: 4, rules: 4, K: 12, human: 5, name: '⭐ Best routine: 4 rules + 12 candidates + insaani hisaab', tr: [76.3, 86.9, 92.5], gm: [61.2, 77.8, 84.8] },
+  m8_8: { g: 3, rules: 8, K: 8, depth: 4, name: '8 rules + 8 candidates + 2 chaal', tr: [91, 95.3, 96], gm: [72.9, 85.7, 90.3] }
 };
 const GROUPS = ['Purana', '1. Sirf rules (calculation nahi)', '2. Sirf calculation (rules nahi, saari chaalein)', '3. Rules + calculation', '4. Insaani best routine (bina engine)'];
 const RULE_TXT = {
@@ -676,18 +678,18 @@ function mfReveal(uci){
 }
 function mfRecord(ok){
   if (T.recorded) return; T.recorded = true;
-  st.mh = st.mh || []; st.mh.push({ k: T.mk, ok: ok ? 1 : 0, san: T.d.bestSan, at: Date.now() }); if (st.mh.length > 1000) st.mh.shift();
+  st.mh = st.mh || []; st.mh.push({ k: T.mk, ok: ok ? 1 : 0, san: T.d.bestSan, at: Date.now(), v: ENGV }); if (st.mh.length > 1000) st.mh.shift();
   st.seen[T.p.fen] = (st.seen[T.p.fen] || 0) + 1;
   if (!ok) { st.queue = st.queue.filter(q => q.fen !== T.p.fen); st.queue.push({ fen: T.p.fen, at: st.counter + 4 + Math.floor(Math.random() * 4) }); }
   save();
 }
 function renderModeStats(){
   const el = document.getElementById('stModes'); if (!el) return;
-  const mh = st.mh || []; const rows = [];
+  const mhAll = st.mh || [], mh = mhAll.filter(x => verOf(x) === ENGV); const rows = [];
   for (const k in MODES) { if (k === 'classic') continue; const a = mh.filter(x => x.k === k).slice(-100); if (!a.length) continue;
     const M = MODES[k]; const ref = M.g === 1 ? M.gm : M.gm[0];
     rows.push(`<tr><td>${esc(M.name)}${M.optimal ? ' <span class="badge">Optimal</span>' : ''}</td><td>${a.length}</td><td><b>${pct(a.map(x => x.ok))}</b></td><td class="muted">${ref}%</td></tr>`); }
-  el.innerHTML = rows.length ? `<table class="mt small"><tr><th>Mode</th><th>Positions</th><th>Aapka</th><th>Rules/engine (games)</th></tr>${rows.join('')}</table><p class="small muted">"Aapka" = kitni baar aapki list (rules mode) ya aapki chaal (calculation mode) mein engine jaisi chaal thi.</p>` : '<span class="muted small">Abhi kisi naye mode mein position nahi kheli.</span>';
+  el.innerHTML = rows.length ? `<table class="mt small"><tr><th>Mode</th><th>Positions</th><th>Aapka</th><th>Rules/engine (games, ${ENGV})</th></tr>${rows.join('')}</table><p class="small muted">"Aapka" = kitni baar aapki list (rules mode) ya aapki chaal (calculation mode) mein engine jaisi chaal thi.</p>` : '<span class="muted small">Abhi kisi naye mode mein position nahi kheli.</span>';
 }
 // ---------- Examples: 5 full step-by-step examples for each mode ----------
 let EXD = null, EXC = null, EXS = null; const EX = { k: 'm8_10', i: 0, s: 0 };
@@ -875,12 +877,14 @@ document.getElementById('tgAuto').onclick = () => { if (tgTimer) { clearInterval
 // ================= STATS =================
 function pct(arr){ return arr.length ? Math.round(100 * arr.reduce((a, b) => a + b, 0) / arr.length) + '%' : '–'; }
 function renderStats(){
-  const h = st.hist.slice(-100);
+  const hv = st.hist.filter(x => verOf(x) === ENGV), h = hv.slice(-100);
   document.getElementById('stMatch').textContent = pct(h.map(x => x.m));
   document.getElementById('stThreat').textContent = pct(h.filter(x => x.t >= 0).map(x => x.t));
   document.getElementById('stScan').textContent = pct(h.filter(x => x.s >= 0).map(x => x.s));
   document.getElementById('stCand').textContent = pct(h.filter(x => x.c !== undefined && x.c >= 0).map(x => x.c));
-  document.getElementById('stInfo').textContent = `Pichhli ${h.length} positions ka hisaab. Kul ${st.hist.length} positions kheli. Dohrane ke liye ${st.queue.length} positions line mein.`;
+  const byV = {}; for (const x of st.hist) { const v = verOf(x); (byV[v] = byV[v] || []).push(x.m); }
+  const older = Object.keys(byV).filter(v => v !== ENGV).sort().map(v => `${v}: ${pct(byV[v].slice(-100))} (${byV[v].length})`).join(', ');
+  document.getElementById('stInfo').textContent = `Engine ${ENGV}: pichhli ${h.length} positions ka hisaab. Kul ${st.hist.length} positions kheli. Dohrane ke liye ${st.queue.length} positions line mein.` + (older ? ` Purane engine par aapka match rate: ${older}.` : '');
   renderModeStats();
   document.getElementById('stRecent').innerHTML = st.hist.slice(-20).reverse().map(x => `<span class="${x.m ? 'good' : 'bad'}">${x.m ? '✓' : '✗'} ${esc(x.san)}</span>`).join(' &nbsp; ') || '<span class="muted">Abhi koi nahi</span>';
 }
